@@ -1,26 +1,22 @@
-from fastapi import APIRouter,Depends,HTTPException,status
-from .entries_schema import EntriesRequest,EntriesResponse
-from app.database.database import get_db
+from fastapi import APIRouter,Depends,status,HTTPException
+from typing import List
+from app.api.schemas.entries_schema import EntriesRequest,EntriesResponse
+from app.db.database import get_db
 from sqlalchemy.orm import Session
-from .entries_model import Entries
-from app.component.users.users_schema import UserRequest
+from app.api.dependency import get_current_user
+from app.api.schemas.users_schema import UserRequest
+from app.db.models.entries_model import Entries
 
+router = APIRouter(prefix='/entries',tags=['Entries'])
 
-def post_entry(request:EntriesRequest,current_user:UserRequest,db:Session=Depends(get_db)):
-    user_id=current_user.user_id
-    new_entry =Entries(user_id=user_id,title=request.title,body=request.body)
-    db.add(new_entry)
-    db.commit()
-    db.refresh(new_entry)
-    return new_entry
-
-
-def fetch_all_entries(current_user:UserRequest,db:Session=Depends(get_db)):
+@router.get('/',response_model=List[EntriesResponse],status_code=status.HTTP_200_OK)
+def get_all_entries(current_user:UserRequest=Depends(get_current_user),db:Session=Depends(get_db)):
     user_id=current_user.user_id
     entries=db.query(Entries).filter(Entries.user_id==user_id).all()
     return entries
-    
-def fetch_entry(id,current_user:UserRequest,db:Session=Depends(get_db)):
+
+@router.get('/{id}',response_model=EntriesResponse,status_code=status.HTTP_200_OK)
+def get_entry(id:int,current_user:UserRequest=Depends(get_current_user),db:Session=Depends(get_db)):
     user_id=current_user.user_id
     entry=db.query(Entries).filter(Entries.id==id).first()
     
@@ -32,7 +28,19 @@ def fetch_entry(id,current_user:UserRequest,db:Session=Depends(get_db)):
 
     return entry
 
-def update_entry(id,request:EntriesRequest,current_user:UserRequest,db:Session=Depends(get_db)):
+@router.post('/',response_model=EntriesResponse,status_code=status.HTTP_201_CREATED)
+def create_entry(request:EntriesRequest,current_user:UserRequest=Depends(get_current_user), db:Session=Depends(get_db)):
+   
+    user_id=current_user.user_id
+    new_entry =Entries(user_id=user_id,title=request.title,body=request.body)
+    db.add(new_entry)
+    db.commit()
+    db.refresh(new_entry)
+    return new_entry
+
+@router.put('/{id}',status_code=status.HTTP_200_OK)
+def edit_entry(id:int,request:EntriesRequest,current_user:UserRequest=Depends(get_current_user),db:Session=Depends(get_db)):
+    
     user_id=current_user.user_id
     title=request.title
     body=request.body
@@ -51,8 +59,9 @@ def update_entry(id,request:EntriesRequest,current_user:UserRequest,db:Session=D
     return'updated'
 
 
-def remove_entry(id,current_user:UserRequest,db:Session=Depends(get_db)):
-
+@router.delete('/{id}',status_code=status.HTTP_200_OK)
+def delete_entry(id,current_user:UserRequest=Depends(get_current_user),db:Session=Depends(get_db)):
+  
     user_id=current_user.user_id
 
     entry=db.query(Entries).filter(Entries.id==id).first()
@@ -68,3 +77,4 @@ def remove_entry(id,current_user:UserRequest,db:Session=Depends(get_db)):
     db.commit()
 
     return 'entry has been deleted'
+

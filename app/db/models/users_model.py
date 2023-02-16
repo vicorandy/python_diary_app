@@ -1,11 +1,11 @@
-from  app.database.database import Base
+from  app.db.database import Base
 
 from sqlalchemy import Column,String,Integer
 from sqlalchemy.orm import relationship
 
 from datetime import datetime,timedelta
 from jose import JWTError,jwt
-from app.component.users.users_schema import TokenData
+from app.api.schemas.users_schema import TokenData
 
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"

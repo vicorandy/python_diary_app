@@ -1,13 +1,20 @@
-from .users_schema import UserRequest,LoginRequest,Token
-from .users_model import User
+from fastapi import APIRouter,status,Depends,HTTPException
+from app.api.schemas.users_schema import UserRequest,UserResponse,LoginResponse,Token,TokenUserResponse
 from sqlalchemy.orm import Session
-from fastapi import Depends,HTTPException,status
-from app.database.database import get_db
-from .hashing import Hash
-from app.middel_ware.auth import get_current_user
+from app.db.database import get_db
+from fastapi.security import OAuth2PasswordRequestForm
+from app.db.models.users_model import User
+from app.common.hashing import Hash
+from app.api.dependency import get_current_user
 
 
-def create_user(request:UserRequest,db:Session=Depends(get_db)):
+
+
+router = APIRouter(tags=['users'],prefix='/users')
+
+
+@router.post('/register',response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
+def create(request:UserRequest,db:Session=Depends(get_db)):
 
     user=db.query(User).filter(User.email==request.email).first()
 
@@ -35,17 +42,17 @@ def create_user(request:UserRequest,db:Session=Depends(get_db)):
             }
         }
     return response
-    
 
-def login_user(request:LoginRequest,db:Session=Depends(get_db)):
-    
+
+@router.post('/login',response_model=Token,status_code=status.HTTP_200_OK)
+def login(request:OAuth2PasswordRequestForm=Depends(),db:Session=Depends(get_db)):
     user=db.query(User).filter(User.email==request.username).first()
 
     if not user:
         raise HTTPException(status_code=404, detail = f'user with the email :{request.username} was not found')
 
     if not Hash.verify(user.password,request.password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail=f'password or email is not correct')
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail=f'Invalid Credentials')
 
     access_token = user.create_access_token(
         data={"user_id": user.id} 
@@ -57,8 +64,8 @@ def login_user(request:LoginRequest,db:Session=Depends(get_db)):
             }
     return data
 
-
-def fetch_user(request:Token,db:Session=Depends(get_db)):
+@router.post('/user',status_code=status.HTTP_200_OK,response_model=TokenUserResponse)
+def get_user(request:Token,db:Session=Depends(get_db)):
     token=request.access_token
     
     id=get_current_user(token)
@@ -68,4 +75,3 @@ def fetch_user(request:Token,db:Session=Depends(get_db)):
     return user
 
 
-    

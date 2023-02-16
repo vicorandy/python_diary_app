@@ -1,19 +1,16 @@
 from fastapi import Depends,HTTPException,status
 from jose import jwt,JWTError 
 from fastapi.security import OAuth2PasswordBearer 
-from app.component.users.users_schema import TokenData 
+from app.api.schemas.users_schema import TokenData
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 ALGORITHM = os.getenv("ALGORITHM")
-
 ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES')
 
-
 oauth2_scheme =OAuth2PasswordBearer(tokenUrl='users/login')
-
 
 def verify_token(token:str,credentials_exception):
     try:
